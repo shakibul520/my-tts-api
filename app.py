@@ -18,23 +18,27 @@ def generate():
         data = request.json
         text = data.get('text', '')
         voice = data.get('voice', 'bn-BD-NabanitaNeural')
-        
-        # Speed, Pitch এবং Volume রিসিভ করা
-        rate_val = data.get('rate', 0)
-        pitch_val = data.get('pitch', 0)
-        volume_val = data.get('volume', 0)
+
+        # ডাটা ইন্টিজার (Number) হিসেবে রিসিভ করা
+        rate_val = int(data.get('rate', 0))
+        pitch_val = int(data.get('pitch', 0))
+        volume_val = int(data.get('volume', 0))
 
         if not text:
             return jsonify({"error": "No text provided"}), 400
 
-        # Edge-TTS এর ফরমেট সেট করা
-        rate_str = f"+{rate_val}%" if int(rate_val) >= 0 else f"{rate_val}%"
-        pitch_str = f"+{pitch_val}%" if int(pitch_val) >= 0 else f"{pitch_val}%"
-        volume_str = f"+{volume_val}%" if int(volume_val) >= 0 else f"{volume_val}%"
+        # ম্যাজিক ফিক্স: ভ্যালু 0 (Normal) থাকলে কোনো ট্যাগ পাঠাবে না!
+        voice_params = {}
+        if rate_val != 0:
+            voice_params['rate'] = f"+{rate_val}%" if rate_val > 0 else f"{rate_val}%"
+        if pitch_val != 0:
+            voice_params['pitch'] = f"+{pitch_val}%" if pitch_val > 0 else f"{pitch_val}%"
+        if volume_val != 0:
+            voice_params['volume'] = f"+{volume_val}%" if volume_val > 0 else f"{volume_val}%"
 
         async def get_audio_data():
-            # ভলিউম প্যারামিটার যোগ করা হলো
-            communicate = edge_tts.Communicate(text, voice, rate=rate_str, pitch=pitch_str, volume=volume_str)
+            # ডাইনামিক প্যারামিটার পাস করা
+            communicate = edge_tts.Communicate(text, voice, **voice_params)
             audio_bytes = b""
             async for chunk in communicate.stream():
                 if chunk["type"] == "audio":
@@ -42,9 +46,6 @@ def generate():
             return audio_bytes
 
         audio_content = asyncio.run(get_audio_data())
-
-        if not audio_content:
-            return jsonify({"error": "Failed to generate audio"}), 500
 
         return send_file(
             io.BytesIO(audio_content),
@@ -54,7 +55,7 @@ def generate():
         )
 
     except Exception as e:
-        print(f"Server Error: {str(e)}")
+        print(f"Error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
