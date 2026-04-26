@@ -10,7 +10,7 @@ CORS(app)
 
 @app.route('/')
 def home():
-    return "KinetiVox AI Engine (Pro v4) is Live!"
+    return "KinetiVox AI Engine (Pro v4.1) is Live!"
 
 @app.route('/generate', methods=['POST'])
 def generate():
@@ -19,7 +19,7 @@ def generate():
         text = data.get('text', '')
         voice = data.get('voice', 'bn-BD-NabanitaNeural')
 
-        # ডাটা ইন্টিজার (Number) হিসেবে রিসিভ করা
+        # ডাটাগুলো নাম্বার হিসেবে রিসিভ করা হচ্ছে
         rate_val = int(data.get('rate', 0))
         pitch_val = int(data.get('pitch', 0))
         volume_val = int(data.get('volume', 0))
@@ -27,17 +27,19 @@ def generate():
         if not text:
             return jsonify({"error": "No text provided"}), 400
 
-        # ম্যাজিক ফিক্স: ভ্যালু 0 (Normal) থাকলে কোনো ট্যাগ পাঠাবে না!
         voice_params = {}
+        
+        # 🎯 স্পিড এবং ভলিউম যাবে % এ
         if rate_val != 0:
             voice_params['rate'] = f"+{rate_val}%" if rate_val > 0 else f"{rate_val}%"
-        if pitch_val != 0:
-            voice_params['pitch'] = f"+{pitch_val}%" if pitch_val > 0 else f"{pitch_val}%"
         if volume_val != 0:
             voice_params['volume'] = f"+{volume_val}%" if volume_val > 0 else f"{volume_val}%"
+            
+        # 🎯 ম্যাজিক ফিক্স: পিচ অবশ্যই Hz এ যেতে হবে!
+        if pitch_val != 0:
+            voice_params['pitch'] = f"+{pitch_val}Hz" if pitch_val > 0 else f"{pitch_val}Hz"
 
         async def get_audio_data():
-            # ডাইনামিক প্যারামিটার পাস করা
             communicate = edge_tts.Communicate(text, voice, **voice_params)
             audio_bytes = b""
             async for chunk in communicate.stream():
