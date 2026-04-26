@@ -1,11 +1,12 @@
+import asyncio
+import edge_tts
+import os
+import uuid
 from flask import Flask, request, send_file
 from flask_cors import CORS
-import edge_tts
-import asyncio
-import os
 
 app = Flask(__name__)
-CORS(app) 
+CORS(app)
 
 @app.route('/')
 def home():
@@ -13,19 +14,29 @@ def home():
 
 @app.route('/generate', methods=['POST'])
 def generate():
-    data = request.json
-    text = data.get('text', 'হ্যালো')
-    voice = data.get('voice', 'bn-BD-NabanitaNeural') 
+    try:
+        data = request.json
+        text = data.get('text', '')
+        voice = data.get('voice', 'bn-BD-NabanitaNeural')
+
+        if not text:
+            return {"error": "No text provided"}, 400
+
+        # ক্লাউড সার্ভারের জন্য টেম্পোরারি ফাইল পাথ এবং ইউনিক নাম ব্যবহার
+        filename = f"/tmp/{uuid.uuid4()}.mp3"
+
+        async def amain() -> None:
+            communicate = edge_tts.Communicate(text, voice)
+            await communicate.save(filename)
+
+        # asyncio loop রান করা
+        asyncio.run(amain())
+
+        return send_file(filename, mimetype="audio/mpeg", as_attachment=True, download_name="voice.mp3")
     
-    output_filename = "output.mp3"
-
-    async def create_audio():
-        communicate = edge_tts.Communicate(text, voice)
-        await communicate.save(output_filename)
-
-    asyncio.run(create_audio())
-
-    return send_file(output_filename, mimetype="audio/mpeg", as_attachment=True, download_name="voice.mp3")
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        return {"error": str(e)}, 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
