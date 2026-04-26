@@ -1,7 +1,6 @@
 import asyncio
 import edge_tts
-import os
-import uuid
+import io
 from flask import Flask, request, send_file
 from flask_cors import CORS
 
@@ -22,20 +21,25 @@ def generate():
         if not text:
             return {"error": "No text provided"}, 400
 
-        # অডিও ফাইলের নাম তৈরি
-        filename = f"/tmp/{uuid.uuid4()}.mp3"
-
-        async def amain() -> None:
+        # অডিও ডাটা মেমোরিতে জমা করার জন্য
+        async def get_audio():
             communicate = edge_tts.Communicate(text, voice)
-            # এখানে 'save' হবে (আগের 'saver' ভুল ছিল)
-            await communicate.save(filename)
+            audio_data = b""
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio_data += chunk["data"]
+            return audio_data
 
-        asyncio.run(amain())
+        audio_bytes = asyncio.run(get_audio())
+        
+        return send_file(
+            io.BytesIO(audio_bytes),
+            mimetype="audio/mpeg",
+            as_attachment=True,
+            download_name="voice.mp3"
+        )
 
-        return send_file(filename, mimetype="audio/mpeg", as_attachment=True, download_name="voice.mp3")
-    
     except Exception as e:
-        print(f"Error: {e}")
         return {"error": str(e)}, 500
 
 if __name__ == '__main__':
