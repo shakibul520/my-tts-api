@@ -10,7 +10,8 @@ CORS(app)
 
 @app.route('/')
 def home():
-    return "KinetiVox AI Engine (Pro v4.1) is Live!"
+    # ভার্সন আপডেট করা হলো যাতে আপনি বুঝতে পারেন নতুন কোড লাইভ হয়েছে
+    return "KinetiVox AI Global Engine (V5.0) is Live!"
 
 @app.route('/generate', methods=['POST'])
 def generate():
@@ -19,7 +20,7 @@ def generate():
         text = data.get('text', '')
         voice = data.get('voice', 'bn-BD-NabanitaNeural')
 
-        # ডাটাগুলো নাম্বার হিসেবে রিসিভ করা হচ্ছে
+        # স্লাইডার বা স্ট্যাপার থেকে আসা ভ্যালুগুলো রিসিভ করা
         rate_val = int(data.get('rate', 0))
         pitch_val = int(data.get('pitch', 0))
         volume_val = int(data.get('volume', 0))
@@ -29,17 +30,18 @@ def generate():
 
         voice_params = {}
         
-        # 🎯 স্পিড এবং ভলিউম যাবে % এ
+        # স্পিড এবং ভলিউম (%)
         if rate_val != 0:
             voice_params['rate'] = f"+{rate_val}%" if rate_val > 0 else f"{rate_val}%"
         if volume_val != 0:
             voice_params['volume'] = f"+{volume_val}%" if volume_val > 0 else f"{volume_val}%"
             
-        # 🎯 ম্যাজিক ফিক্স: পিচ অবশ্যই Hz এ যেতে হবে!
+        # পিচ ফিক্স (অবশ্যই Hz হতে হবে নতুবা মাল্টিলিঙ্গুয়াল ভয়েস ক্রাশ করবে)
         if pitch_val != 0:
             voice_params['pitch'] = f"+{pitch_val}Hz" if pitch_val > 0 else f"{pitch_val}Hz"
 
         async def get_audio_data():
+            # **voice_params এর মাধ্যমে ডাইনামিক ইফেক্টগুলো পাস করা হচ্ছে
             communicate = edge_tts.Communicate(text, voice, **voice_params)
             audio_bytes = b""
             async for chunk in communicate.stream():
@@ -53,7 +55,7 @@ def generate():
             io.BytesIO(audio_content),
             mimetype="audio/mpeg",
             as_attachment=True,
-            download_name=f"kinetivox_master.mp3"
+            download_name="kinetivox_v5_master.mp3"
         )
 
     except Exception as e:
@@ -61,5 +63,6 @@ def generate():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
+    # Render-এর জন্য পোর্ট সেটআপ
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
