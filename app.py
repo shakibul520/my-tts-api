@@ -22,20 +22,20 @@ def generate():
         if not text:
             return {"error": "No text provided"}, 400
 
-        # ক্লাউড সার্ভারের জন্য টেম্পোরারি ফাইল পাথ এবং ইউনিক নাম ব্যবহার
+        # অডিও ফাইলের নাম তৈরি
         filename = f"/tmp/{uuid.uuid4()}.mp3"
 
         async def amain() -> None:
             communicate = edge_tts.Communicate(text, voice)
+            # এখানে 'save' হবে (আগের 'saver' ভুল ছিল)
             await communicate.save(filename)
 
-        # asyncio loop রান করা
         asyncio.run(amain())
 
         return send_file(filename, mimetype="audio/mpeg", as_attachment=True, download_name="voice.mp3")
     
     except Exception as e:
-        print(f"Error occurred: {e}")
+        print(f"Error: {e}")
         return {"error": str(e)}, 500
 
 if __name__ == '__main__':
